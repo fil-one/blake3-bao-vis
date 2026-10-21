@@ -34,19 +34,6 @@ export function AttributesSection({
         ObjectAttributes: ['ETag', 'ObjectSize', 'Blake3' as ObjectAttributes],
       });
       const raw = captureBody(command);
-      // The SDK joins the attribute list as "ETag, ObjectSize, Blake3" and
-      // versitygw splits it on the bare comma, so the names after the first
-      // arrive with a leading space and are refused as InvalidArgument. AWS
-      // tolerates the space; the Go SDK and the CLI never add one.
-      command.middlewareStack.add(
-        (next) => async (args) => {
-          const req = args.request as { headers: Record<string, string> };
-          const h = req.headers['x-amz-object-attributes'];
-          if (h) req.headers['x-amz-object-attributes'] = h.replace(/,\s+/g, ',');
-          return next(args);
-        },
-        { step: 'build', name: 'compactObjectAttributes' },
-      );
       await client.send(command);
       const text = new TextDecoder().decode(raw.body ?? new Uint8Array());
       setSize(raw.body?.length ?? 0);
